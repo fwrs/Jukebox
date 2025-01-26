@@ -6,7 +6,7 @@
 //
 
 import SwiftUI
-import Sparkle
+//import Sparkle
 
 final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     
@@ -59,6 +59,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         popover.contentViewController?.view.window?.makeKey()
     }
     
+    @objc func noop() {}
+    
     private func setupStatusBar() {
         // Initialize Status Bar Menu
         statusBarMenu = NSMenu()
@@ -71,9 +73,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         statusBarMenu.addItem(NSMenuItem.separator())
         let updates = NSMenuItem(
             title: "Check for updates...",
-            action: #selector(SUUpdater.checkForUpdates(_:)),
+            action: #selector(noop),
             keyEquivalent: "")
-        updates.target = SUUpdater.shared()
+        updates.target = self
         statusBarMenu.addItem(updates)
         statusBarMenu.addItem(
             withTitle: "Preferences...",
@@ -93,7 +95,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             // Add bar animation to Status Bar Item Button
             let barAnimation = StatusBarAnimation(
                 menubarAppearance: statusBarItemButton.effectiveAppearance,
-                menubarHeight: statusBarItemButton.bounds.height, isPlaying: false)
+                menubarHeight: statusBarItemButton.bounds.height,
+                art: nil,
+                isPlaying: false
+            )
             statusBarItemButton.addSubview(barAnimation)
             
             // Add default marquee text
@@ -163,7 +168,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         // Get track data from notification
         guard let trackTitle = notification.userInfo?["title"] as? String else { return }
         guard let trackArtist = notification.userInfo?["artist"] as? String else { return }
-        guard let isPlaying = notification.userInfo?["isPlaying"] as? Bool  else { return }
+        guard let isPlaying = notification.userInfo?["isPlaying"] as? Bool else { return }
+        guard let art = notification.userInfo?["art"] as? NSImage else { return }
         let titleAndArtist = trackTitle.isEmpty && trackArtist.isEmpty ? "" : "\(trackTitle) • \(trackArtist)"
 
         // Get status item button and marquee text view from button
@@ -183,6 +189,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let padding = Constants.StatusBar.statusBarButtonPadding
         
         if titleAndArtist.isEmpty {
+            barAnimation.art = nil
             barAnimation.isPlaying = false
             button.frame = NSRect(x: 0, y: 0, width: barAnimation.bounds.width + 16, height: button.bounds.height)
             return
@@ -192,11 +199,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         button.frame = NSRect(
             x: 0,
             y: 0,
-            width: stringWidth < limit ? stringWidth + animWidth + 3*padding : limit + animWidth + 3*padding,
+            width: stringWidth < limit ? stringWidth + animWidth + 3.2*padding : limit + animWidth + 3.2*padding,
             height: button.bounds.height)
+        barAnimation.art = art
         barAnimation.isPlaying = isPlaying
         marqueeText.menubarBounds = button.bounds
-
     }
     
     // Called when the status bar appearance is changed to update bar animation color and marquee text color

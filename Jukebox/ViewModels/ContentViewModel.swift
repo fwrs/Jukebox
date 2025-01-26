@@ -167,6 +167,7 @@ class ContentViewModel: ObservableObject {
             self.track.artist = appleMusicApp?.currentTrack?.artist ?? "Unknown Artist"
             self.track.album = appleMusicApp?.currentTrack?.album ?? "Unknown Album"
             self.isLoved = appleMusicApp?.currentTrack?.loved ?? false
+            self.track.albumArt = NSImage(resource: .defaultSong)
             // Might have to change this later...
             var count = 0
             var waitForData: (() -> Void)!
@@ -196,8 +197,16 @@ class ContentViewModel: ObservableObject {
     
     private func updateMenuBarText() {
         DispatchQueue.main.async { [weak self] in
-            guard let title = self?.track.title, let artist = self?.track.artist, let isPlaying = self?.isPlaying else { return }
-            let trackInfo: [String: Any] = ["title": title, "artist": artist, "isPlaying": isPlaying]
+            guard let title = self?.track.title,
+                  let artist = self?.track.artist,
+                  let isPlaying = self?.isPlaying,
+                  let art = self?.track.albumArt else { return }
+            let trackInfo: [String: Any] = [
+                "title": title,
+                "artist": artist,
+                "isPlaying": isPlaying,
+                "art": art
+            ]
             NotificationCenter.default.post(name: NSNotification.Name(rawValue: "TrackChanged"), object: nil, userInfo: trackInfo)
         }
     }

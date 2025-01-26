@@ -13,25 +13,34 @@ class StatusBarAnimation: NSView {
     // Invalidating Variables
     var menubarIsDarkAppearance: Bool {
         didSet {
-            animate()
+            render()
             self.needsDisplay = true
         }
     }
     
-    var isPlaying: Bool = false {
+    var art: NSImage? {
         didSet {
-            animate()
+            render()
+            self.needsDisplay = true
+        }
+    }
+    
+    var isPlaying: Bool {
+        didSet {
+            render()
             self.needsDisplay = true
         }
     }
     
     // Computed Properties
     private var backgroundColor: CGColor {
-        menubarIsDarkAppearance ? NSColor.white.cgColor : NSColor.black.cgColor
+        (menubarIsDarkAppearance || art != nil) ? NSColor.white.cgColor : NSColor.black.cgColor
     }
     
     // Properties
     private var bars = [CALayer]()
+    private var artLayer: CALayer?
+    private var artBackgroundLayer: CALayer?
     private var menubarHeight: Double
     
     // Overrides
@@ -39,11 +48,9 @@ class StatusBarAnimation: NSView {
         return true
     }
     
-    let barHeights = [7.0, 6.0, 9.0, 8.0]
-    let barDurations = [0.6, 0.3, 0.5, 0.7]
-    
-    init(menubarAppearance: NSAppearance, menubarHeight: Double, isPlaying: Bool) {
+    init(menubarAppearance: NSAppearance, menubarHeight: Double, art: NSImage?, isPlaying: Bool) {
         self.menubarIsDarkAppearance = menubarAppearance.name == .vibrantDark ? true : false
+        self.art = art
         self.isPlaying = isPlaying
         self.menubarHeight = menubarHeight
         super.init(frame: CGRect(
@@ -53,34 +60,56 @@ class StatusBarAnimation: NSView {
             height: menubarHeight))
         self.wantsLayer = true
         
-        animate()
+        render()
     }
     
-    func animate() {
+    func render() {
         self.layer?.sublayers?.removeAll()
         bars.removeAll()
-        for i in 0..<barHeights.count {
-            let bar = CALayer()
-            bar.backgroundColor = backgroundColor
-            bar.cornerRadius = isPlaying ? 1 : 2
-            bar.cornerCurve = .continuous
-            bar.anchorPoint = .zero
-            bar.frame = CGRect(x: isPlaying ? Double(i) * 3.5 : Double(i) * 8, y: (menubarHeight / 2) - 5, width: isPlaying ? 2.0 : 6.0, height: isPlaying ? barHeights[i] : 10.0)
-            self.layer?.addSublayer(bar)
+        artLayer = nil
+        
+        if let art {
+            let artBackgroundLayer = CALayer()
+            artBackgroundLayer.frame = CGRect(x: 0, y: (menubarHeight / 2) - 8, width: 16.0, height: 16.0)
+            artBackgroundLayer.cornerRadius = 2
+            artBackgroundLayer.cornerCurve = .continuous
+            artBackgroundLayer.masksToBounds = true
+            artBackgroundLayer.backgroundColor = NSColor.gray.cgColor
+            artBackgroundLayer.opacity = 0.5
+            self.layer?.addSublayer(artBackgroundLayer)
+            self.artBackgroundLayer = artBackgroundLayer
+
+            let artLayer = CALayer()
+            artLayer.contents = art.cgImage(forProposedRect: nil, context: nil, hints: nil)
+            artLayer.frame = CGRect(x: 0, y: (menubarHeight / 2) - 8, width: 16.0, height: 16.0)
+            artLayer.cornerRadius = 2
+            artLayer.cornerCurve = .continuous
+            artLayer.masksToBounds = true
+            artLayer.magnificationFilter = .trilinear
+            artLayer.minificationFilter = .trilinear
+            self.layer?.addSublayer(artLayer)
+            self.artLayer = artLayer
+        }
+        
+        if !isPlaying {
+            artBackgroundLayer?.opacity = 1
+            artLayer?.opacity = 0.35
             
-            // Return early if not playing music
-            if !isPlaying && i == 1 { return }
-            if !isPlaying { continue }
-            
-            let animation = CABasicAnimation(keyPath: #keyPath(CALayer.bounds))
-            animation.fromValue = bar.bounds
-            animation.toValue = CGRect(origin: .zero, size: CGSize(width: bar.bounds.width, height: 2))
-            animation.duration = barDurations[i]
-            animation.autoreverses = true
-            animation.repeatCount = .greatestFiniteMagnitude
-            animation.beginTime = CACurrentMediaTime() - Double(i)
-            bar.add(animation, forKey: nil)
-            bars.append(bar)
+            for i in 0..<2 {
+                let bar = CALayer()
+                bar.backgroundColor = backgroundColor
+                bar.cornerRadius = 1.5
+                bar.cornerCurve = .continuous
+                bar.anchorPoint = .zero
+                if art == nil {
+                    bar.frame = CGRect(x: 5.5 + Double(i) * 7, y: (menubarHeight / 2) - 6, width: 3, height: 12.0)
+                } else {
+                    bar.frame = CGRect(x: 4 + Double(i) * 5.5, y: (menubarHeight / 2) - 5, width: 2.5, height: 10.0)
+                }
+                self.layer?.addSublayer(bar)
+                
+                bars.append(bar)
+            }
         }
     }
     
